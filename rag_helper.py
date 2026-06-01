@@ -10,4 +10,4 @@ def retrieve_context(query):
     emb = model.encode(query).tolist()
     results = collection.query(query_embeddings=[emb], n_results=2)
     docs = results.get('documents',[[]])[0]
-    return '\n\n'.join(docs) if docs else 'No medical guidance found.'
+    return "\n\n".join(docs) if docs else "No medical guidance found."
