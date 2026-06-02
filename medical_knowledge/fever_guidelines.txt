@@ -1,1 +1,12 @@
-Persistent fever requires clinical evaluation.
+Fever guidance:
+
+- Hydrate well
+- Rest
+- Monitor symptoms
+- Track duration
+
+Medical review may be needed if:
+- Fever persists
+- Breathing difficulty develops
+- High-risk patients affected
+- Symptoms worsen.

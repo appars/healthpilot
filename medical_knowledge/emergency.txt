@@ -1,1 +1,10 @@
-Chest pain or severe breathing difficulty require emergency care.
+Emergency medical situations require rapid assessment.
+
+Examples:
+- Stroke symptoms
+- Heart attack symptoms
+- Severe fever deterioration
+- Trauma
+- Breathing distress
+
+Educational AI should recommend urgent care when severe symptoms exist.

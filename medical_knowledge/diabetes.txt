@@ -1,1 +1,20 @@
-Diabetes may increase risk and requires careful monitoring.
+Diabetes is a chronic metabolic condition affecting blood sugar regulation.
+
+Patients with diabetes may experience:
+- Increased infection risk
+- Slower wound healing
+- Fatigue
+- Blood sugar fluctuations
+
+During illness:
+- Monitor glucose
+- Maintain hydration
+- Continue medication unless advised otherwise
+
+Warning signs:
+- Confusion
+- Vomiting
+- Severe weakness
+- Persistent hyperglycemia
+
+Clinical review recommended.

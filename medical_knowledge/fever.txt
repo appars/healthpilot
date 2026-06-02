@@ -1,1 +1,12 @@
-Persistent fever requires medical evaluation.
+Fever commonly occurs with infection or inflammation.
+
+Possible causes:
+- Viral infection
+- Bacterial infection
+- Respiratory illness
+
+Associated symptoms:
+- Chills
+- Fatigue
+- Sweating
+- Body pain
