@@ -28,6 +28,10 @@ st.markdown("""
 .stButton>button {
 background-color:#00897B !important;color:white !important;border-radius:12px;
 height:3.2em;width:100%;font-size:18px;font-weight:700;border:none;}
+
+.analyze-panel{background:linear-gradient(135deg,#E3F2FD,#F5F9FF);padding:14px;border-radius:14px;border:1px solid #BBDEFB;margin-bottom:12px;}
+.live-status{background:#FAFAFA;padding:10px;border-radius:12px;border:1px solid #E0E0E0;margin-bottom:10px;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,7 +122,7 @@ def create_pdf(patient, final_text, uploaded_file=None):
     story.append(badges)
     story.append(Spacer(1,12))
 
-    sections = final_text.replace('🏥 Clinical Guidance','').replace('⚠ Educational AI only. Doctor review required.','')
+    sections = final_text.replace('🏥 Clinical Guidance','').replace('🎯 AI Risk Score: {risk_score}/100 ({confidence})\n\n⚠ Educational AI only. Doctor review required.','')
     guidance_para = Paragraph(sections.replace('\n','<br/>'), styles['BodyText'])
     guide_table = Table([["Clinical Guidance & Recommended Actions"],[guidance_para]], colWidths=[520])
     guide_table.setStyle(TableStyle([
@@ -148,13 +152,13 @@ with st.sidebar:
     st.info("Model: Mistral")
     st.markdown("### 🤖 Agent Stack")
     st.markdown("""
-🧠 Planner Agent 🟢  
-🖼️ Vision Agent 🟢  
-📚 Retriever Agent 🟢  
-🩺 Triage Agent 🟢  
-🏥 Clinical Governance Agent 🟢
-✅ Synthesizer 🟢
-""")
+    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>🧠 Planner Agent</span><span>🟢</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>🖼️ Vision Agent</span><span>🟢</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>📚 Retriever Agent</span><span>🟢</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>🩺 Triage Agent</span><span>🟢</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>🏥 Clinical Governance Agent</span><span>🟢</span></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>✅ Synthesizer</span><span>🟢</span></div>
+    """, unsafe_allow_html=True)
 
 col1, col2 = st.columns([1,1.35])
 
@@ -187,6 +191,8 @@ with col1:
 
     uploaded_file = st.file_uploader("🖼️ Upload Medical Image", type=["png","jpg","jpeg"])
 
+    st.markdown('<div class="analyze-panel"><b>🧠 Ready for Clinical Analysis</b><br>Multi-agent workflow • Estimated reasoning 5–10 sec</div>', unsafe_allow_html=True)
+
     if uploaded_file:
         st.image(uploaded_file, width=250)
 
@@ -199,7 +205,7 @@ with col1:
 with col2:
     st.subheader("🏥 HealthPilot Analysis")
     st.markdown('<div class="workflow">🧠 Plan → 🖼️ Vision → 📚 Retrieve → 🩺 Triage → 🏥 Govern → ✅ Synthesize</div>', unsafe_allow_html=True)
-
+    
     if analyze:
         st.session_state.running = True
 
@@ -207,6 +213,15 @@ with col2:
 
         fever_flag = "High Fever" if temperature > 102 else "Fever" if temperature > 100.4 else "Normal"
         spo2_flag = "Urgent" if spo2 < 92 else "Caution" if spo2 < 95 else "Normal"
+        risk_score = 20
+        if temperature > 102: risk_score += 30
+        elif temperature > 100.4: risk_score += 15
+        if spo2 < 92: risk_score += 35
+        elif spo2 < 95: risk_score += 20
+        if 'diabetes' in conditions.lower(): risk_score += 15
+        risk_score = min(risk_score,100)
+        confidence = "High" if risk_score > 80 else "Moderate" if risk_score > 60 else "Low"
+
 
         patient = f"""
 Name: {name}
@@ -337,6 +352,10 @@ Provide concise governance bullets.
 <li>{gender}, {age} years</li>
 <li>{weight} kg</li>
 </ul>
+
+<h4>🎯 AI Risk Assessment</h4>
+<div class="badge-red">Risk Score: {risk_score} /100</div>
+<div class="badge-orange">Confidence: {confidence}</div>
 
 <h4>🌡 Vital Risk Status</h4>
 <div class="{temp_badge}">{fever_flag} • {temperature}°F</div>
