@@ -5,7 +5,7 @@
 import streamlit as st
 from langchain_community.llms import Ollama
 from rag_helper import retrieve_context
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet
 import tempfile
 from datetime import datetime
@@ -22,6 +22,9 @@ st.markdown("""
 .badge-red{background:#D32F2F;color:white;padding:6px 12px;border-radius:20px;font-weight:700;display:inline-block;margin:4px;}
 .badge-orange{background:#F57C00;color:white;padding:6px 12px;border-radius:20px;font-weight:700;display:inline-block;margin:4px;}
 .badge-green{background:#2E7D32;color:white;padding:6px 12px;border-radius:20px;font-weight:700;display:inline-block;margin:4px;}
+.status-run{color:#F57C00;font-weight:700;}
+.status-done{color:#2E7D32;font-weight:700;}
+.risk-banner{padding:12px;border-radius:12px;font-size:18px;font-weight:700;margin-bottom:15px;text-align:center;}
 .stButton>button {
 background-color:#00897B !important;color:white !important;border-radius:12px;
 height:3.2em;width:100%;font-size:18px;font-weight:700;border:none;}
@@ -33,19 +36,106 @@ llm = Ollama(model="mistral")
 if "running" not in st.session_state:
     st.session_state.running = False
 
-def create_pdf(patient, final_text):
+
+
+def create_pdf(patient, final_text, uploaded_file=None):
+    from reportlab.platypus import Table, TableStyle, Image, Paragraph, Spacer
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    doc = SimpleDocTemplate(tmp.name)
+    doc = SimpleDocTemplate(tmp.name,rightMargin=25,leftMargin=25,topMargin=25,bottomMargin=25)
     styles = getSampleStyleSheet()
     story = []
-    story.append(Paragraph("HealthPilot AI Clinical Summary", styles['Title']))
-    story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['BodyText']))
-    story.append(Spacer(1,12))
-    story.append(Paragraph("<b>Patient Information</b>", styles['Heading2']))
-    story.append(Paragraph(patient.replace("\n","<br/>"), styles['BodyText']))
+
+    title_style = styles["Heading2"]
+    title_style.textColor = colors.HexColor("#1565C0")
+
+    # Header
+    header = Table([["HealthPilot AI Clinical Summary"]], colWidths=[520])
+    header.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,-1), colors.HexColor("#1565C0")),
+        ("TEXTCOLOR",(0,0),(-1,-1), colors.white),
+        ("FONTNAME",(0,0),(-1,-1),'Helvetica-Bold'),
+        ("FONTSIZE",(0,0),(-1,-1),20),
+        ("ALIGN",(0,0),(-1,-1),'CENTER'),
+        ("TOPPADDING",(0,0),(-1,-1),12),
+        ("BOTTOMPADDING",(0,0),(-1,-1),12),
+    ]))
+    story.append(header)
+    story.append(Spacer(1,8))
+    wm = Paragraph("<font color='#B0BEC5'><i>HealthPilot AI • Educational Clinical Summary</i></font>", styles['BodyText'])
+    story.append(wm)
+    story.append(Spacer(1,6))
+    story.append(Paragraph(f"<font color='#666666'><b>Generated:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}</font>", styles['BodyText']))
     story.append(Spacer(1,10))
-    story.append(Paragraph("<b>Final Guidance</b>", styles['Heading2']))
-    story.append(Paragraph(final_text.replace("\n","<br/>"), styles['BodyText']))
+
+    high_risk = ('Urgent' in patient) or ('High Fever' in patient)
+    risk_text = 'HIGH-RISK RESPIRATORY CASE' if high_risk else 'LOW CLINICAL RISK'
+    risk_color = '#D32F2F' if high_risk else '#2E7D32'
+
+    risk = Table([[risk_text]], colWidths=[520])
+    risk.setStyle(TableStyle([
+        ('BACKGROUND',(0,0),(-1,-1), colors.HexColor(risk_color)),
+        ('TEXTCOLOR',(0,0),(-1,-1), colors.white),
+        ('FONTNAME',(0,0),(-1,-1),'Helvetica-Bold'),
+        ('FONTSIZE',(0,0),(-1,-1),15),
+        ('ALIGN',(0,0),(-1,-1),'CENTER'),
+        ('TOPPADDING',(0,0),(-1,-1),10),
+        ('BOTTOMPADDING',(0,0),(-1,-1),10),
+    ]))
+    story.append(risk)
+    story.append(Spacer(1,12))
+
+    if uploaded_file:
+        try:
+            story.append(Paragraph('<b>Patient Image</b>', title_style))
+            img = Image(uploaded_file, width=2.0*inch, height=2.0*inch)
+            img_tbl = Table([[img]], colWidths=[150])
+            img_tbl.setStyle(TableStyle([('BOX',(0,0),(-1,-1),2, colors.HexColor('#90CAF9')),('BACKGROUND',(0,0),(-1,-1), colors.white)]))
+            story.append(img_tbl)
+            story.append(Spacer(1,10))
+        except:
+            pass
+
+    patient_para = Paragraph(patient.replace('\n','<br/>'), styles['BodyText'])
+    patient_table = Table([["Patient Information"],[patient_para]], colWidths=[520])
+    patient_table.setStyle(TableStyle([
+        ('BACKGROUND',(0,0),(-1,0), colors.HexColor('#E3F2FD')),
+        ('TEXTCOLOR',(0,0),(-1,0), colors.HexColor('#0D47A1')),
+        ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),
+        ('FONTSIZE',(0,0),(-1,0),14),
+        ('BOX',(0,0),(-1,-1),1, colors.HexColor('#64B5F6')),
+        ('BACKGROUND',(0,1),(-1,-1), colors.whitesmoke),
+    ]))
+    story.append(patient_table)
+    story.append(Spacer(1,12))
+
+    # Risk badges
+    badge_data=[[Paragraph('<font color="white"><b>HIGH FEVER</b></font>', styles['BodyText']), Paragraph('<font color="white"><b>LOW SpO2 / URGENT</b></font>', styles['BodyText'])]]
+    badges=Table(badge_data,colWidths=[255,255])
+    badges.setStyle(TableStyle([('BACKGROUND',(0,0),(0,0), colors.HexColor('#D32F2F')),('BACKGROUND',(1,0),(1,0), colors.HexColor('#E65100')),('ALIGN',(0,0),(-1,-1),'CENTER'),('TOPPADDING',(0,0),(-1,-1),8),('BOTTOMPADDING',(0,0),(-1,-1),8)]))
+    story.append(badges)
+    story.append(Spacer(1,12))
+
+    sections = final_text.replace('🏥 Clinical Guidance','').replace('⚠ Educational AI only. Doctor review required.','')
+    guidance_para = Paragraph(sections.replace('\n','<br/>'), styles['BodyText'])
+    guide_table = Table([["Clinical Guidance & Recommended Actions"],[guidance_para]], colWidths=[520])
+    guide_table.setStyle(TableStyle([
+        ('BACKGROUND',(0,0),(-1,0), colors.HexColor('#E8F5E9')),
+        ('TEXTCOLOR',(0,0),(-1,0), colors.HexColor('#1B5E20')),
+        ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),
+        ('FONTSIZE',(0,0),(-1,0),14),
+        ('BOX',(0,0),(-1,-1),1, colors.HexColor('#81C784')),
+        ('BACKGROUND',(0,1),(-1,-1), colors.HexColor('#F9FFF9')),
+    ]))
+    story.append(guide_table)
+    story.append(Spacer(1,12))
+
+    notice = Table([["Educational AI Prototype • HealthPilot AI • Doctor review required"]], colWidths=[520])
+    notice.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1), colors.HexColor('#FFF8E1')),('TEXTCOLOR',(0,0),(-1,-1), colors.HexColor('#5D4037')),('ALIGN',(0,0),(-1,-1),'CENTER'),('FONTNAME',(0,0),(-1,-1),'Helvetica-Oblique')]))
+    story.append(notice)
+
     doc.build(story)
     return tmp.name
 
@@ -56,12 +146,14 @@ with st.sidebar:
     st.header("⚙️ HealthPilot Control Center")
     st.success("🟢 Local AI Running")
     st.info("Model: Mistral")
+    st.markdown("### 🤖 Agent Stack")
     st.markdown("""
-🧠 Planner Agent  
-🖼️ Vision Agent  
-📚 Retriever Agent  
-🩺 Triage Agent  
-🏥 Clinical Governance Agent
+🧠 Planner Agent 🟢  
+🖼️ Vision Agent 🟢  
+📚 Retriever Agent 🟢  
+🩺 Triage Agent 🟢  
+🏥 Clinical Governance Agent 🟢
+✅ Synthesizer 🟢
 """)
 
 col1, col2 = st.columns([1,1.35])
@@ -69,10 +161,10 @@ col1, col2 = st.columns([1,1.35])
 with col1:
     st.subheader("📋 Patient Intake Form")
 
-    name = st.text_input("Patient Name","Rajesh Kumar")
+    name = st.text_input("Patient Name","Apparsamy Perumal")
     gender = st.selectbox("Gender",["Male","Female","Other"])
-    age = st.number_input("Age",1,120,55)
-    weight = st.number_input("Weight (kg)",20,250,75)
+    age = st.number_input("Age",1,120,58)
+    weight = st.number_input("Weight (kg)",20,250,80)
     temperature = st.number_input(
         "Temperature (°F)",
         90.0,
@@ -190,19 +282,49 @@ Provide concise governance bullets.
 ⚠ Educational AI only. Doctor review required.
 """
 
-            with st.expander("🧠 Planner Agent", expanded=True):
+            progress_bar = st.progress(0)
+
+            planner_status = "✅ Completed"
+            vision_status = "⏳ Waiting"
+            retrieve_status = "⏳ Waiting"
+            triage_status = "⏳ Waiting"
+            gov_status = "⏳ Waiting"
+            synth_status = "⏳ Waiting"
+
+            progress_bar.progress(15)
+            vision_status = "✅ Completed" if uploaded_file else "⚪ Skipped"
+            progress_bar.progress(30)
+            retrieve_status = "✅ Completed"
+            progress_bar.progress(50)
+            triage_status = "✅ Completed"
+            progress_bar.progress(70)
+            gov_status = "✅ Completed"
+            progress_bar.progress(90)
+            synth_status = "✅ Completed"
+            progress_bar.progress(100)
+
+            if spo2 < 92:
+                risk_banner = '<div class="risk-banner" style="background:#FFEBEE;color:#C62828;">🔴 HIGH‑RISK PATIENT • Immediate Attention Suggested</div>'
+            elif temperature > 100.4:
+                risk_banner = '<div class="risk-banner" style="background:#FFF3E0;color:#EF6C00;">🟠 Elevated Clinical Risk</div>'
+            else:
+                risk_banner = '<div class="risk-banner" style="background:#E8F5E9;color:#2E7D32;">🟢 Low Clinical Risk</div>'
+
+            st.markdown(risk_banner, unsafe_allow_html=True)
+
+            with st.expander(f"🧠 Planner Agent {planner_status}", expanded=True):
                 st.markdown(planner)
 
-            with st.expander("🖼️ Vision Agent"):
+            with st.expander(f"🖼️ Vision Agent {vision_status}"):
                 st.info(vision_note)
 
-            with st.expander("📚 Retriever Agent"):
+            with st.expander(f"📚 Retriever Agent {retrieve_status}"):
                 st.markdown(context)
 
-            with st.expander("🩺 Triage Agent"):
+            with st.expander(f"🩺 Triage Agent {triage_status}"):
                 st.markdown(triage)
 
-            with st.expander("🏥 Clinical Governance Agent"):
+            with st.expander(f"🏥 Clinical Governance Agent {gov_status}"):
                 st.markdown(governance)
 
             st.markdown(f"""
@@ -227,7 +349,7 @@ Provide concise governance bullets.
 </div>
 """, unsafe_allow_html=True)
 
-            pdf_path = create_pdf(patient, final_summary)
+            pdf_path = create_pdf(patient, final_summary, uploaded_file)
 
             with open(pdf_path, "rb") as f:
                 st.download_button(
