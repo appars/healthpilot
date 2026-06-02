@@ -134,6 +134,10 @@ def create_pdf(patient, final_text, uploaded_file=None):
         ('BACKGROUND',(0,1),(-1,-1), colors.HexColor('#F9FFF9')),
     ]))
     story.append(guide_table)
+    story.append(Spacer(1,8))
+    next_steps = Table([["Recommended Next Steps"],["• Seek medical consultation\n• Monitor temperature\n• Recheck SpO2\n• Stay hydrated\n• Seek emergency care if symptoms worsen"]], colWidths=[520])
+    next_steps.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0), colors.HexColor('#E3F2FD')),('TEXTCOLOR',(0,0),(-1,0), colors.HexColor('#0D47A1')),('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('BOX',(0,0),(-1,-1),1, colors.HexColor('#64B5F6')),('BACKGROUND',(0,1),(-1,-1), colors.white)]))
+    story.append(next_steps)
     story.append(Spacer(1,12))
 
     notice = Table([["Educational AI Prototype • HealthPilot AI • Doctor review required"]], colWidths=[520])
@@ -363,6 +367,16 @@ Provide concise governance bullets.
 
 <h4>🏥 Clinical Guidance</h4>
 <pre style="white-space: pre-wrap;">{governance}</pre>
+
+
+<h4>🩺 Recommended Next Steps</h4>
+<ul>
+<li>Seek medical consultation promptly</li>
+<li>Monitor temperature every 4–6 hours</li>
+<li>Recheck SpO2 periodically</li>
+<li>Stay hydrated and rest</li>
+<li>Seek emergency care if breathing worsens</li>
+</ul>
 
 <p><b>⚠ Educational AI only. Doctor review required.</b></p>
 </div>
